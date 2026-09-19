@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo 'No tests set'",
-    "lint": "echo 'No linter set'"
+    "test": "node index.test.js",
+    "lint": "node index.js"
   },
   "repository": {
     "type": "git",
