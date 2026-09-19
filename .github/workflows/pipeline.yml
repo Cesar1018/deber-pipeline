@@ -1,0 +1,79 @@
+name: Pipeline Integracion Continua
+
+# Requisito 1: Disparadores en push a main y pull_request hacia main
+# Requisito 2: Ignora cambios que solo afecten a la carpeta docs/
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+
+jobs:
+  # Requisito 3: Job "calidad" que ejecuta el linter
+  calidad:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar linter y fallar ante advertencias
+        run: npm run lint -- --max-warnings=0
+
+  # Requisito 4: Job "pruebas" con matriz de dos versiones del lenguaje
+  pruebas:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Usar Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar pruebas
+        run: npm test
+
+  # Requisito 5: Job "empaquetar" depende de los dos anteriores
+  empaquetar:
+    runs-on: ubuntu-latest
+    needs: [calidad, pruebas]
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Empaquetar / Construir proyecto
+        run: npm run build
+
+      # Requisito 6: Publica el artefacto y el reporte de cobertura
+      - name: Subir artefacto de compilacion
+        uses: actions/upload-artifact@v4
+        with:
+          name: artefacto-compilado
+          path: dist/
+
+      - name: Subir reporte de cobertura
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-cobertura
+          path: coverage/
